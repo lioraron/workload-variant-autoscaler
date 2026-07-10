@@ -23,6 +23,7 @@ import (
 	goflag "flag"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -419,15 +420,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Always validate TLS configuration since HTTPS is required
+	// Validate Prometheus transport configuration before creating the client.
 	if err := utils.ValidateTLSConfig(cfg); err != nil {
-		setupLog.Error(err, "TLS configuration validation failed - HTTPS is required")
+		setupLog.Error(err, "Prometheus transport configuration validation failed")
 		os.Exit(1)
 	}
 
+	promURL, _ := url.Parse(cfg.PrometheusBaseURL()) // already validated above
 	setupLog.Info("Initializing Prometheus client",
-		"address", cfg.PrometheusBaseURL(),
-		"tlsEnabled", true,
+		"address", promURL.Redacted(),
+		"tlsEnabled", utils.IsHTTPS(cfg.PrometheusBaseURL()),
+		"allowHTTP", cfg.PrometheusAllowHTTP(),
 	)
 
 	// Create Prometheus client with TLS support
